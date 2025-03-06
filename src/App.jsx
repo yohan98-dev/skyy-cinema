@@ -1,3 +1,4 @@
+import { updateSearchCount, getTrendingMovies } from './appwrite';
 import MovieCard from './components/MovieCard';
 import Search from './components/Search';
 import Spinner from './components/Spinner';
@@ -19,6 +20,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [trendingMovies, setTrendingMovies] = useState([]);
+
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
   const fetchMovies = async (querry = '') => {
@@ -37,6 +40,9 @@ function App() {
           return;
         }
         setMovies(data.results || []);
+        if (querry && data.results.length > 0) {
+          await updateSearchCount(querry, data.results[0]);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -45,11 +51,21 @@ function App() {
       setIsLoading(false);
     }
   };
-
+  const fetchTrendingMovies = async () => {
+    try {
+      const movies = await getTrendingMovies();
+      setTrendingMovies(movies);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   useEffect(() => {
     fetchMovies(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
 
+  useEffect(() => {
+    fetchTrendingMovies();
+  }, []);
   return (
     <main>
       <div className="pattern" />
@@ -62,6 +78,19 @@ function App() {
           </h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
+        {trendingMovies.length > 0 && (
+          <section className="trending">
+            <h2>Trending Movies</h2>
+            <ul>
+              {trendingMovies.map((movie, index) => (
+                <li key={movie.$id}>
+                  <p>{index + 1}</p>
+                  <img src={movie.poster_url} alt="poster" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <section className="all-movies">
           <h2 className="mt-[40px]">All Movies</h2>
           {isLoading ? (
